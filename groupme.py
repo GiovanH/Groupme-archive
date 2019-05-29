@@ -16,6 +16,7 @@ messages?acceptFiles=1&before_id=155043683618610791&limit=100'
 
 import requests
 import json
+from slugify import slugify
 
 
 mtot_fields = ['created_at', 'name', 'text']
@@ -33,7 +34,7 @@ def timestamp():
     Returns:
         str: Timestamp
     """
-    return datetime.datetime.now().strftime("%Y-%m-%d %I:%M%p")
+    return datetime.datetime.now().strftime("%Y-%m-%d %I-%M%p")
 
 
 class GroupMe(object):
@@ -42,6 +43,7 @@ class GroupMe(object):
     def __init__(self, access_token):
         super(GroupMe, self).__init__()
         self.access_token = access_token
+        self._groups = None
 
     def apiGet(self, apibase, api_params, **kwargs):
         apibase_formatted = apibase.format(
@@ -59,9 +61,20 @@ class GroupMe(object):
             headers={'X-Access-Token': self.access_token}
         )
 
+    @property
+    def groups(self):
+        if not self._groups:
+            self._groups = self.getGenericApi('groups')
+        return self._groups
+
     def dumpChat(self, group_id):
         import os
-        jsonpath = group_id + "_" + timestamp() + ".json"
+
+        (this_group_name,) = [g['name'] for g in self.groups if g['group_id'] == group_id]
+
+        folder = group_id + " " + slugify(this_group_name)  # + " " + timestamp()
+        os.makedirs(folder, exist_ok=True)
+        jsonpath = os.path.join(folder, "group_{}_{}.json".format(group_id, timestamp()))
 
         # message_api_base = "https://api.groupme.com/v3/groups/{group_id}/messages?{params}"
         # api_params = {
@@ -74,29 +87,32 @@ class GroupMe(object):
 
         messages = self.getAllMessages(group_id)
 
-        json.dump(messages, open(jsonpath, "w"))
+        json.dump(messages, open(jsonpath, "w"), indent=2)
 
         sm = sorted([mtot(m) for m in messages])
 
-        with open(group_id + "_" + timestamp() + ".csv", "w") as csv:
-            csv.write("\t".join(mtot_fields) + "\n")
-            csv.writelines("\t".join(map(str, msg)) + "\n" for msg in sm)
+        with open(os.path.join(folder, "messages_{}.csv".format(timestamp())), "w", encoding='utf-8') as csv:
+            csv.write(",".join(mtot_fields) + "\n")
+            csv.writelines(",".join(map(lambda m: '"{}"'.format(m), msg)) + "\n" for msg in sm)
 
-        filedir = group_id + "_files"
+        filedir = os.path.join(folder, "files")
         os.makedirs(filedir, exist_ok=True)
         for message in messages:
             for attachment in message.get("attachments"):
                 url = attachment.get('url')
                 if not url:
                     continue
-                outfile = os.path.join(filedir, url.split("/")[-1])
+                outfile = os.path.join(filedir, "{4}.{3}".format(*url.split(".")))
                 if os.path.exists(outfile):
                     continue
+                print("#", end="")
                 response = requests.get(url, stream=True)
                 response.raise_for_status()
                 with open(outfile, 'wb') as handle:
                     for block in response.iter_content(1024):
                         handle.write(block)
+
+        print("#")
 
     def getGenericApi(self, page):
 
