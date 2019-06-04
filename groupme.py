@@ -17,6 +17,7 @@ messages?acceptFiles=1&before_id=155043683618610791&limit=100'
 import requests
 import json
 from slugify import slugify
+import selenium_login
 
 
 mtot_fields = ['created_at', 'name', 'text']
@@ -194,12 +195,18 @@ if __name__ == "__main__":
     import argparse
 
     args = argparse.ArgumentParser()
-    args.add_argument("access_token")
     args.add_argument("--all", action="store_true")
     args.add_argument("--group_ids", nargs="+", default=[])
     args = args.parse_args()
 
-    groupme = GroupMe(args.access_token)
+    sessiondata = selenium_login.login(
+        "https://groupme.com/signin",
+        lambda browser: browser.current_url == "https://web.groupme.com/chats"
+    )
+
+    access_token = sessiondata.get("cookies").get("token")
+
+    groupme = GroupMe(access_token)
 
     group_ids_to_save = args.group_ids
     if args.all:
