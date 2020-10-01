@@ -1,19 +1,5 @@
 #!/bin/python3
 
-"""
-curl 'https://api.groupme.com/v3/groups/47158453/
-messages?acceptFiles=1&before_id=155043683618610791&limit=100'
--H 'Origin: https://web.groupme.com'
--H 'Accept-Encoding: gzip, deflate, br'
--H 'Accept-Language: en-US,en;q=0.9'
--H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.82 Safari/537.36 Vivaldi/2.3.1440.41'
--H 'Accept: application/json, text/plain, */*'
--H 'Referer: https://web.groupme.com/'
--H 'Connection: keep-alive'
--H 'X-Access-Token: X09Hwlcj6LUH8O2STHquJ7xJZD4plY9MAGrFTJ1Q'
--H 'DNT: 1' --compressed
-"""
-
 import requests
 import json
 from slugify import slugify
