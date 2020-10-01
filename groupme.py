@@ -18,7 +18,7 @@ import requests
 import json
 from slugify import slugify
 import selenium_login
-
+from snip import jfileutil
 
 mtot_fields = ['created_at', 'name', 'text']
 
@@ -90,7 +90,11 @@ class GroupMe(object):
 
         json.dump(messages, open(jsonpath, "w"), indent=2)
 
-        sm = sorted([mtot(m) for m in messages])
+        try:
+            sm = [mtot(m) for m in messages]
+            sm.sort()
+        except TypeError:
+            print(sm)
 
         with open(os.path.join(folder, "messages_{}.csv".format(timestamp())), "w", encoding='utf-8') as csv:
             csv.write(",".join(mtot_fields) + "\n")
@@ -199,14 +203,18 @@ if __name__ == "__main__":
     args.add_argument("--group_ids", nargs="+", default=[])
     args = args.parse_args()
 
-    sessiondata = selenium_login.login(
-        "https://groupme.com/signin",
-        lambda browser: browser.current_url == "https://web.groupme.com/chats"
-    )
 
-    access_token = sessiondata.get("cookies").get("token")
-
-    groupme = GroupMe(access_token)
+    try:
+        access_token = jfileutil.load("token")
+        groupme = GroupMe(access_token)
+    except:
+        sessiondata = selenium_login.login(
+            "https://groupme.com/signin",
+            lambda browser: browser.current_url == "https://web.groupme.com/chats"
+        )
+        access_token = sessiondata.get("cookies").get("token")
+        jfileutil.save(access_token, "token")
+        groupme = GroupMe(access_token)
 
     group_ids_to_save = args.group_ids
     if args.all:
